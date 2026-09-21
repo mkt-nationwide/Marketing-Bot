@@ -33,7 +33,15 @@ async function handleEvent(event) {
 
   const text = event.message.text.trim().toLowerCase();
 
-  if (text === 'bot') {
+  const triggers = [
+    'ส่งlead', 'ส่ง lead',
+    'ส่งหลีด', 'ส่ง หลีด',
+    'ส่งลีด', 'ส่ง ลีด',
+    'ส่งหรีด', 'ส่ง หรีด',
+    'ส่งรีด', 'ส่ง รีด'
+  ];
+
+  if (triggers.includes(text)) {
     try {
       const lead = await getLatestLead();
       
