@@ -31,9 +31,9 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
 
-  const text = event.message.text.trim();
+  const text = event.message.text.trim().toLowerCase();
 
-  if (text === 'ส่ง Lead') {
+  if (text === 'bot') {
     try {
       const lead = await getLatestLead();
       
