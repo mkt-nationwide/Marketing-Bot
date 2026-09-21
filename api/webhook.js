@@ -2,12 +2,9 @@ const line = require('@line/bot-sdk');
 const { getLatestLead } = require('../src/googleSheets');
 const { generateFlexMessage } = require('../src/flexMessage');
 
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
-};
-
-const client = new line.Client(config);
+const client = new line.messagingApi.MessagingApiClient({
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || 'dummy'
+});
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -41,19 +38,28 @@ async function handleEvent(event) {
       const lead = await getLatestLead();
       
       if (!lead) {
-        return client.replyMessage(event.replyToken, {
-          type: 'text',
-          text: 'ไม่พบข้อมูล Lead ในระบบค่ะ'
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{
+            type: 'text',
+            text: 'ไม่พบข้อมูล Lead ในระบบค่ะ'
+          }]
         });
       }
 
       const flexMessage = generateFlexMessage(lead);
-      return client.replyMessage(event.replyToken, flexMessage);
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [flexMessage]
+      });
     } catch (error) {
       console.error('Error fetching lead:', error);
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: 'เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google Sheets ค่ะ'
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: 'text',
+          text: 'เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google Sheets ค่ะ'
+        }]
       });
     }
   }
