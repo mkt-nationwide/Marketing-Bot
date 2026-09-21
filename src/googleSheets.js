@@ -18,42 +18,43 @@ async function getLatestLead() {
   const sheets = google.sheets({ version: 'v4', auth });
   
   const spreadsheetId = process.env.SPREADSHEET_ID;
-  const sheetName = process.env.SHEET_NAME || 'Sheet1';
+  const sheetName = process.env.SHEET_NAME || 'การตอบแบบฟอร์ม 4';
 
   if (!spreadsheetId) {
     throw new Error("SPREADSHEET_ID is not set");
   }
 
-  // Fetch all rows to get the latest one. Alternatively, if the sheet is huge, 
-  // we could append a formula, but fetching all is simpler for standard usage.
+  // Fetch from A to Q (17 columns)
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A:K`, // A to K covers 11 columns
+    range: `'${sheetName}'!A:Q`,
   });
 
   const rows = response.data.values;
   if (!rows || rows.length <= 1) {
-    return null; // No data (assuming row 1 is header)
+    return null;
   }
 
-  // Get the last row
   const lastRow = rows[rows.length - 1];
 
-  // Map columns to fields based on expected order:
-  // 0: บริษัท, 1: ชื่อลูกค้า, 2: ประเภทโรงงาน, 3: เบอร์โทร, 4: เขต,
-  // 5: จังหวัด, 6: แผนก, 7: สินค้า, 8: Note, 9: ช่องทางติดต่อ, 10: ส่งต่อ
+  // Combine products from columns K(10) to O(14)
+  const products = [lastRow[10], lastRow[11], lastRow[12], lastRow[13], lastRow[14]]
+    .filter(Boolean) // Remove empty values
+    .join(', ');
+
   const lead = {
-    company: lastRow[0] || '',
-    customerName: lastRow[1] || '',
-    factoryType: lastRow[2] || '',
+    timestamp: lastRow[0] || '',
+    company: lastRow[1] || '',
+    customerName: lastRow[2] || '',
     phone: lastRow[3] || '',
     district: lastRow[4] || '',
     province: lastRow[5] || '',
-    department: lastRow[6] || '',
-    product: lastRow[7] || '',
-    note: lastRow[8] || '',
-    contactChannel: lastRow[9] || '',
-    forwardTo: lastRow[10] || ''
+    contactChannel: lastRow[6] || '',
+    forwardTo: lastRow[7] || '',
+    factoryType: lastRow[8] || '',
+    department: lastRow[9] || '',
+    product: products || '-',
+    note: lastRow[16] || ''
   };
 
   return lead;
