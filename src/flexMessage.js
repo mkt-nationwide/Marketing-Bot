@@ -60,15 +60,6 @@ function generateFlexMessage(lead) {
             layout: "horizontal",
             margin: "md",
             contents: [
-              { type: "text", text: "🏢 แผนก", size: "sm", color: "#8c8c8c", flex: 1 },
-              { type: "text", text: lead.department || "-", size: "sm", color: "#111111", flex: 2, wrap: true }
-            ]
-          },
-          {
-            type: "box",
-            layout: "horizontal",
-            margin: "md",
-            contents: [
               { type: "text", text: "💼 บริษัท", size: "sm", color: "#8c8c8c", flex: 1 },
               { type: "text", text: lead.company || "-", size: "sm", color: "#111111", flex: 2, wrap: true }
             ]
@@ -110,6 +101,15 @@ function generateFlexMessage(lead) {
             type: "box",
             layout: "horizontal",
             margin: "lg",
+            contents: [
+              { type: "text", text: "🏢 แผนก", size: "sm", color: "#8c8c8c", flex: 1 },
+              { type: "text", text: lead.department || "-", size: "sm", color: "#111111", flex: 2, wrap: true }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "md",
             contents: [
               { type: "text", text: "📦 สินค้า", size: "sm", color: "#8c8c8c", flex: 1 },
               { type: "text", text: lead.product || "-", size: "sm", color: "#e74c3c", weight: "bold", flex: 2, wrap: true }
