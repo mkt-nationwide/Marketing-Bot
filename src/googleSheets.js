@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 
-async function getLatestLead() {
+async function getLeads(options = {}) {
+  const { department, limit = 1 } = options;
   const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
   
   if (!credentialsBase64) {
@@ -32,32 +33,54 @@ async function getLatestLead() {
 
   const rows = response.data.values;
   if (!rows || rows.length <= 1) {
-    return null;
+    return [];
   }
 
-  const lastRow = rows[rows.length - 1];
+  // Parse all rows (skipping header)
+  let allLeads = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    
+    // Skip completely empty rows
+    if (!row || row.length === 0) continue;
 
-  // Combine products from columns K(10) to O(14)
-  const products = [lastRow[10], lastRow[11], lastRow[12], lastRow[13], lastRow[14]]
-    .filter(Boolean) // Remove empty values
-    .join(', ');
+    // Combine products from columns K(10) to O(14)
+    const products = [row[10], row[11], row[12], row[13], row[14]]
+      .filter(Boolean)
+      .join(', ');
 
-  const lead = {
-    timestamp: lastRow[0] || '',
-    company: lastRow[1] || '',
-    customerName: lastRow[2] || '',
-    phone: lastRow[3] || '',
-    district: lastRow[4] || '',
-    province: lastRow[5] || '',
-    contactChannel: lastRow[6] || '',
-    forwardTo: lastRow[7] || '',
-    factoryType: lastRow[8] || '',
-    department: lastRow[9] || '',
-    product: products || '-',
-    note: lastRow[16] || ''
-  };
+    allLeads.push({
+      timestamp: row[0] || '',
+      company: row[1] || '',
+      customerName: row[2] || '',
+      phone: row[3] || '',
+      district: row[4] || '',
+      province: row[5] || '',
+      contactChannel: row[6] || '',
+      forwardTo: row[7] || '',
+      factoryType: row[8] || '',
+      department: row[9] || '',
+      product: products || '-',
+      note: row[16] || ''
+    });
+  }
 
-  return lead;
+  // Filter by department if specified
+  if (department) {
+    const searchDept = department.toLowerCase();
+    allLeads = allLeads.filter(lead => 
+      lead.department && lead.department.toLowerCase().includes(searchDept)
+    );
+  }
+
+  // Take the last N rows (latest)
+  return allLeads.slice(-limit);
 }
 
-module.exports = { getLatestLead };
+// Keep getLatestLead for backwards compatibility if needed, but we'll migrate webhook to use getLeads
+async function getLatestLead() {
+  const leads = await getLeads({ limit: 1 });
+  return leads.length > 0 ? leads[0] : null;
+}
+
+module.exports = { getLeads, getLatestLead };

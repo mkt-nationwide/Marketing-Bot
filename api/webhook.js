@@ -1,5 +1,5 @@
 const line = require('@line/bot-sdk');
-const { getLatestLead } = require('../src/googleSheets');
+const { getLeads } = require('../src/googleSheets');
 const { generateFlexMessage } = require('../src/flexMessage');
 
 const client = new line.messagingApi.MessagingApiClient({
@@ -34,34 +34,63 @@ async function handleEvent(event) {
   const text = event.message.text.trim().toLowerCase();
 
   const triggers = [
-    'ส่งlead', 'ส่ง lead',
-    'ส่งหลีด', 'ส่ง หลีด',
-    'ส่งลีด', 'ส่ง ลีด',
-    'ส่งหรีด', 'ส่ง หรีด',
-    'ส่งรีด', 'ส่ง รีด'
+    'ส่ง lead', 'ส่ง หลีด', 'ส่ง ลีด', 'ส่ง หรีด', 'ส่ง รีด',
+    'ส่งlead', 'ส่งหลีด', 'ส่งลีด', 'ส่งหรีด', 'ส่งรีด'
   ];
 
-  if (triggers.includes(text)) {
+  const matchedTrigger = triggers.find(t => text.startsWith(t));
+
+  if (matchedTrigger) {
     try {
-      const lead = await getLatestLead();
+      // Parse department and limit
+      const remainder = text.slice(matchedTrigger.length).trim();
+      const parts = remainder.split(/\s+/).filter(Boolean);
       
-      if (!lead) {
+      let department = '';
+      let limit = 1;
+
+      if (parts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        if (!isNaN(lastPart)) {
+          limit = parseInt(lastPart, 10);
+          department = parts.slice(0, -1).join(' ');
+        } else {
+          department = parts.join(' ');
+        }
+      }
+
+      // Max 5 for LINE array limit
+      limit = Math.min(Math.max(limit, 1), 5);
+
+      const leads = await getLeads({ department, limit });
+      
+      if (!leads || leads.length === 0) {
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [{
             type: 'text',
-            text: 'ไม่พบข้อมูล Lead ในระบบค่ะ'
+            text: department 
+              ? `ไม่พบข้อมูล Lead ล่าสุดสำหรับแผนก "${department}" ค่ะ` 
+              : 'ไม่พบข้อมูล Lead ในระบบค่ะ'
           }]
         });
       }
 
-      const flexMessage = generateFlexMessage(lead);
+      // Create an array of individual flex messages
+      const replyMessages = leads.map(lead => {
+        return {
+          type: 'flex',
+          altText: '🎉 New Marketing Lead',
+          contents: generateFlexMessage(lead).contents
+        };
+      });
+
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [flexMessage]
+        messages: replyMessages
       });
     } catch (error) {
-      console.error('Error fetching lead:', error);
+      console.error('Error fetching leads:', error);
       return client.replyMessage({
         replyToken: event.replyToken,
         messages: [{
