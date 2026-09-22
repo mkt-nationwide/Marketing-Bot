@@ -114,9 +114,27 @@ async function handleEvent(event) {
       // Remove mention from the text to get the actual question
       const prompt = text.replace(/@marketing bot/g, '').trim();
       
+      // Fetch latest 50 leads to use as context for Gemini
+      const recentLeads = await getLeads({ limit: 50 });
+      const contextData = JSON.stringify(recentLeads, null, 2);
+      
+      const systemInstruction = `คุณคือ AI ผู้ช่วยอัจฉริยะชื่อ Marketing Bot หน้าที่ของคุณคือการช่วยสรุป วิเคราะห์ และตอบคำถามเกี่ยวกับฐานข้อมูลลูกค้า (Lead) ของบริษัท
+      
+ข้อมูลด้านล่างนี้คือรายชื่อลูกค้าล่าสุดจากระบบ (แสดงผลสูงสุด 50 รายการล่าสุด) เพื่อใช้เป็นบริบทในการตอบคำถาม:
+\`\`\`json
+${contextData}
+\`\`\`
+
+ข้อควรระวัง: 
+- ให้ตอบคำถามโดยอิงจากข้อมูลนี้เป็นหลัก หากข้อมูลมีไม่เพียงพอให้บอกตามตรง
+- ตอบด้วยภาษาไทยที่สุภาพ เป็นมืออาชีพ แต่อ่านง่าย ไม่ต้องยาวเกินไป`;
+
       const response = await ai.models.generateContent({
         model: 'gemini-3.5-flash-lite',
-        contents: prompt || 'สวัสดีค่ะ มีอะไรให้ฉันช่วยไหมคะ?'
+        contents: prompt || 'สรุปข้อมูลลูกค้าล่าสุดให้ฟังหน่อย',
+        config: {
+          systemInstruction: systemInstruction
+        }
       });
 
       const replyText = response.text || 'ขออภัยค่ะ ฉันไม่สามารถตอบคำถามนี้ได้';
