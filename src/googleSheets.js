@@ -25,10 +25,10 @@ async function getLeads(options = {}) {
     throw new Error("SPREADSHEET_ID is not set");
   }
 
-  // Fetch from A to Q (17 columns)
+  // Fetch from A to R (18 columns)
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${sheetName}'!A:Q`,
+    range: `'${sheetName}'!A:R`,
   });
 
   const rows = response.data.values;
@@ -61,7 +61,7 @@ async function getLeads(options = {}) {
       factoryType: row[8] || '',
       department: row[9] || '',
       product: products || '-',
-      note: row[16] || ''
+      note: row[17] || ''
     });
   }
 
