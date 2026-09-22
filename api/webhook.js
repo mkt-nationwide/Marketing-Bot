@@ -115,7 +115,7 @@ async function handleEvent(event) {
       const prompt = text.replace(/@marketing bot/g, '').trim();
       
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash-lite',
         contents: prompt || 'สวัสดีค่ะ มีอะไรให้ฉันช่วยไหมคะ?'
       });
 
