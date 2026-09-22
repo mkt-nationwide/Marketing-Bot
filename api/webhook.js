@@ -143,7 +143,35 @@ ${contextData}
         replyToken: event.replyToken,
         messages: [{
           type: 'text',
-          text: replyText
+          text: replyText,
+          quickReply: {
+            items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: 'วิเคราะห์เพิ่มเติม',
+                  text: '@Marketing Bot ขอคำอธิบายเพิ่มเติมหน่อย'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: 'สรุปแบ่งตามแผนก',
+                  text: '@Marketing Bot ช่วยสรุปลูกค้าแบ่งตามแผนกให้หน่อย'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: 'ดู 3 รายการล่าสุด',
+                  text: 'ส่งหลีด 3'
+                }
+              }
+            ]
+          }
         }]
       });
     } catch (error) {
