@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
             }
           } catch (err) {
             console.error(err);
-            alert('เกิดข้อผิดพลาดในการแชร์: ' + err.message);
+            alert('เกิดข้อผิดพลาดในการแชร์: ' + (err.message || JSON.stringify(err, Object.getOwnPropertyNames(err))));
           }
         }
         main();
