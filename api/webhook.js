@@ -49,10 +49,38 @@ module.exports = async function handler(req, res) {
     </head>
     <body>
       <div id="content">
-        <h2 style="color: #2c3e50;">กำลังเปิดหน้าต่างแชร์...</h2>
-        <p style="color: #7f8c8d;">กรุณารอสักครู่</p>
+        <h2 style="color: #2c3e50;">พร้อมส่งต่อข้อมูล</h2>
+        <p style="color: #7f8c8d;">ระบบดึงข้อมูลเสร็จสิ้น กรุณากดปุ่มด้านล่างเพื่อเลือกผู้รับ</p>
+        <button id="shareBtn" style="background-color: #3498db; color: white; padding: 15px 30px; border: none; border-radius: 30px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; display: none;">📤 กดเพื่อเลือกเพื่อนที่จะแชร์</button>
       </div>
       <script>
+        let flexMessageData = null;
+
+        async function shareFlex() {
+          try {
+            if (liff.isApiAvailable('shareTargetPicker')) {
+              const res = await liff.shareTargetPicker([flexMessageData]);
+              if (res) {
+                document.getElementById('content').innerHTML = \`
+                  <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                    <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                  </svg>
+                  <h2 style="color: #4bb71b; margin-top: 20px;">ส่งต่อสำเร็จ!</h2>
+                \`;
+                setTimeout(() => liff.closeWindow(), 2000);
+              } else {
+                liff.closeWindow();
+              }
+            } else {
+              alert('อุปกรณ์ของคุณไม่รองรับการแชร์แบบนี้ครับ');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('เกิดข้อผิดพลาดในการแชร์: ' + (err.message || JSON.stringify(err, Object.getOwnPropertyNames(err))));
+          }
+        }
+
         async function main() {
           try {
             await liff.init({ liffId: "${process.env.LIFF_ID || ''}" });
@@ -83,28 +111,20 @@ module.exports = async function handler(req, res) {
               body: JSON.stringify({ action: 'generateFlex', lead: leadData })
             });
 
-            const flexMsg = await response.json();
+            flexMessageData = await response.json();
+            
+            const shareBtn = document.getElementById('shareBtn');
+            shareBtn.style.display = 'inline-block';
+            shareBtn.onclick = shareFlex;
 
-            if (liff.isApiAvailable('shareTargetPicker')) {
-              const res = await liff.shareTargetPicker([flexMsg]);
-              if (res) {
-                document.getElementById('content').innerHTML = \`
-                  <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                    <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
-                    <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                  </svg>
-                  <h2 style="color: #4bb71b; margin-top: 20px;">ส่งต่อสำเร็จ!</h2>
-                \`;
-                setTimeout(() => liff.closeWindow(), 2000);
-              } else {
-                liff.closeWindow();
-              }
-            } else {
-              alert('อุปกรณ์ของคุณไม่รองรับการแชร์แบบนี้ครับ');
+            // In mobile LINE, we can auto-click since it's not a popup window. 
+            // In external browsers, auto-clicking is blocked.
+            if (liff.isInClient()) {
+              shareFlex();
             }
           } catch (err) {
             console.error(err);
-            alert('เกิดข้อผิดพลาดในการแชร์: ' + (err.message || JSON.stringify(err, Object.getOwnPropertyNames(err))));
+            alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message);
           }
         }
         main();
