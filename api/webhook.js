@@ -47,7 +47,14 @@ module.exports = async function handler(req, res) {
               return;
             }
 
-            const leadData = JSON.parse(atob(decodeURIComponent(dataStr)));
+            const b64 = decodeURIComponent(dataStr);
+            const binaryStr = atob(b64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
+            }
+            const utf8Str = new TextDecoder('utf-8').decode(bytes);
+            const leadData = JSON.parse(utf8Str);
 
             const response = await fetch(window.location.pathname, {
               method: 'POST',
