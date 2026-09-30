@@ -1,7 +1,81 @@
-function generateFlexMessage(lead) {
+function formatThaiDate(dateString) {
+  if (!dateString) return "";
+  const datePart = dateString.split(" ")[0]; 
+  const parts = datePart.split("/");
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    let year = parseInt(parts[2], 10);
+    if (year < 2500) year += 543;
+    return `${day}/${month}/${year}`;
+  }
+  return dateString;
+}
+
+function generateFlexMessage(lead, options = {}) {
+  const isShared = options.isShared || false;
   const rawPhone = lead.phone || "";
   const phoneNumber = rawPhone.replace(/[^0-9]/g, '').slice(0, 10);
   const telUri = phoneNumber ? `tel:${phoneNumber}` : "tel:000";
+
+  // Prepare LIFF URL for sharing
+  const liffId = process.env.LIFF_ID || "";
+  const leadDataStr = encodeURIComponent(Buffer.from(JSON.stringify(lead)).toString('base64'));
+  const shareUri = liffId 
+    ? `https://liff.line.me/${liffId}?data=${leadDataStr}`
+    : `https://marketing-bot-eta.vercel.app/api/webhook?noliff=1`;
+
+  const buttons = [
+    {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#2ecc71",
+      cornerRadius: "30px",
+      paddingAll: "12px",
+      flex: 1,
+      action: {
+        type: "uri",
+        label: "📞 โทร",
+        uri: telUri
+      },
+      contents: [
+        {
+          type: "text",
+          text: "📞 โทรติดต่อ",
+          color: "#ffffff",
+          weight: "bold",
+          align: "center",
+          size: "sm"
+        }
+      ]
+    }
+  ];
+
+  if (!isShared) {
+    buttons.push({
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#3498db",
+      cornerRadius: "30px",
+      paddingAll: "12px",
+      flex: 1,
+      action: {
+        type: "uri",
+        label: "📤 ส่งต่อ",
+        uri: shareUri
+      },
+      contents: [
+        {
+          type: "text",
+          text: "📤 ส่งต่อ",
+          color: "#ffffff",
+          weight: "bold",
+          align: "center",
+          size: "sm"
+        }
+      ]
+    });
+  }
 
   return {
     type: "flex",
@@ -26,7 +100,16 @@ function generateFlexMessage(lead) {
                 weight: "bold",
                 color: "#ffffff",
                 size: "sm",
-                flex: 0
+                flex: 1
+              },
+              {
+                type: "text",
+                text: formatThaiDate(lead.timestamp),
+                color: "#a8b8c8",
+                size: "xs",
+                align: "end",
+                flex: 0,
+                margin: "sm"
               }
             ]
           },
@@ -47,11 +130,11 @@ function generateFlexMessage(lead) {
         paddingAll: "20px",
         contents: [
 
-          // Main Info Group (Soft rounded box)
+          // Main Info Group
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#f8f9fa", // Very light gray like the image
+            backgroundColor: "#f8f9fa",
             cornerRadius: "12px",
             paddingAll: "15px",
             contents: [
@@ -111,12 +194,12 @@ function generateFlexMessage(lead) {
             ]
           },
 
-          // Note Box (Soft rounded box)
+          // Note Box
           {
             type: "box",
             layout: "vertical",
             margin: "md",
-            backgroundColor: "#fff0f0", // Light red/pink to make it stand out softly
+            backgroundColor: "#fff0f0",
             paddingAll: "15px",
             cornerRadius: "12px",
             contents: [
@@ -125,11 +208,11 @@ function generateFlexMessage(lead) {
             ]
           },
 
-          // Assignment & Action Group (Soft rounded box)
+          // Assignment & Action Group
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#f4f7f6", // Light green/gray
+            backgroundColor: "#f4f7f6",
             cornerRadius: "12px",
             paddingAll: "15px",
             margin: "md",
@@ -138,7 +221,7 @@ function generateFlexMessage(lead) {
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: "🏢 แผนก", size: "sm", color: "#8c8c8c", flex: 1 },
+                  { type: "text", text: "🏢 ส่งให้แผนก", size: "sm", color: "#8c8c8c", flex: 1 },
                   { type: "text", text: lead.department || "-", size: "sm", color: "#111111", flex: 2, wrap: true }
                 ]
               },
@@ -159,7 +242,7 @@ function generateFlexMessage(lead) {
                 contents: [
                   {
                     type: "text",
-                    text: "ส่งต่อให้:",
+                    text: "ผู้รับเรื่อง:",
                     size: "sm",
                     color: "#8c8c8c",
                     flex: 1,
@@ -178,29 +261,12 @@ function generateFlexMessage(lead) {
                   }
                 ]
               },
-              // Pill-shaped Button
               {
                 type: "box",
-                layout: "vertical",
-                backgroundColor: "#2ecc71",
-                cornerRadius: "30px", // Pill shape
-                paddingAll: "12px",
+                layout: "horizontal",
                 margin: "lg",
-                action: {
-                  type: "uri",
-                  label: "📞 โทรติดต่อลูกค้า",
-                  uri: telUri
-                },
-                contents: [
-                  {
-                    type: "text",
-                    text: "📞 โทรติดต่อลูกค้า",
-                    color: "#ffffff",
-                    weight: "bold",
-                    align: "center",
-                    size: "md"
-                  }
-                ]
+                spacing: "md",
+                contents: buttons
               }
             ]
           }

@@ -13,13 +13,81 @@ const ai = new GoogleGenAI({
 });
 
 module.exports = async function handler(req, res) {
+  // Handle GET requests for LIFF Share Target Picker
+  if (req.method === 'GET') {
+    if (req.query.noliff) {
+      return res.status(400).send("กรุณาตั้งค่า LIFF_ID ใน Vercel Environment Variables ก่อนใช้งานฟีเจอร์ส่งต่อครับ");
+    }
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>กำลังเตรียมข้อมูล...</title>
+      <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    </head>
+    <body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+      <h2>กำลังเปิดหน้าต่างแชร์...</h2>
+      <p>กรุณารอสักครู่</p>
+      <script>
+        async function main() {
+          try {
+            await liff.init({ liffId: "${process.env.LIFF_ID || ''}" });
+            if (!liff.isLoggedIn()) {
+              liff.login();
+              return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataStr = urlParams.get('data');
+            if (!dataStr) {
+              alert('ไม่พบข้อมูลสำหรับแชร์');
+              return;
+            }
+
+            const leadData = JSON.parse(atob(decodeURIComponent(dataStr)));
+
+            const response = await fetch(window.location.pathname, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'generateFlex', lead: leadData })
+            });
+
+            const flexMsg = await response.json();
+
+            if (liff.isApiAvailable('shareTargetPicker')) {
+              await liff.shareTargetPicker([flexMsg]);
+              liff.closeWindow();
+            } else {
+              alert('อุปกรณ์ของคุณไม่รองรับการแชร์แบบนี้ครับ');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('เกิดข้อผิดพลาดในการแชร์: ' + err.message);
+          }
+        }
+        main();
+      </script>
+    </body>
+    </html>
+    `;
+    return res.status(200).setHeader('Content-Type', 'text/html').send(html);
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   try {
+    // Check if it's an internal call from LIFF to generate Flex JSON
+    if (req.body.action === 'generateFlex' && req.body.lead) {
+      const flexJSON = generateFlexMessage(req.body.lead, { isShared: true });
+      return res.status(200).json(flexJSON);
+    }
+
     const events = req.body.events;
-    
     if (!events || events.length === 0) {
       return res.status(200).json({});
     }
@@ -49,7 +117,6 @@ async function handleEvent(event) {
 
   if (matchedTrigger) {
     try {
-      // Parse department and limit
       const remainder = text.slice(matchedTrigger.length).trim();
       const parts = remainder.split(/\s+/).filter(Boolean);
       
@@ -66,9 +133,7 @@ async function handleEvent(event) {
         }
       }
 
-      // Max 5 for LINE array limit
       limit = Math.min(Math.max(limit, 1), 5);
-
       const leads = await getLeads({ department, limit });
       
       if (!leads || leads.length === 0) {
@@ -83,7 +148,6 @@ async function handleEvent(event) {
         });
       }
 
-      // Create an array of individual flex messages
       const replyMessages = leads.map(lead => {
         return {
           type: 'flex',
@@ -111,10 +175,7 @@ async function handleEvent(event) {
   // 2. Check for Gemini AI Mention
   if (text.includes('@marketing bot')) {
     try {
-      // Remove mention from the text to get the actual question
       const prompt = text.replace(/@marketing bot/g, '').trim();
-      
-      // Fetch ALL leads to use as context for Gemini
       const allLeads = await getLeads({ limit: 100000 });
       const contextData = JSON.stringify(allLeads, null, 2);
       
