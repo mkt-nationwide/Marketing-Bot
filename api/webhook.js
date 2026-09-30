@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
           try {
             await liff.init({ liffId: "${process.env.LIFF_ID || ''}" });
             if (!liff.isLoggedIn()) {
-              liff.login();
+              liff.login({ redirectUri: window.location.href });
               return;
             }
 
