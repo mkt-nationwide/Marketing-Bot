@@ -50,6 +50,7 @@ async function getLeads(options = {}) {
       .join(', ');
 
     allLeads.push({
+      rowIndex: i,
       timestamp: row[0] || '',
       company: row[1] || '',
       customerName: row[2] || '',

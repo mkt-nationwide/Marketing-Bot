@@ -20,9 +20,8 @@ function generateFlexMessage(lead, options = {}) {
 
   // Prepare LIFF URL for sharing
   const liffId = process.env.LIFF_ID || "";
-  const leadDataStr = encodeURIComponent(Buffer.from(JSON.stringify(lead)).toString('base64'));
   const shareUri = liffId 
-    ? `https://liff.line.me/${liffId}?data=${leadDataStr}`
+    ? `https://liff.line.me/${liffId}?row=${lead.rowIndex || ''}`
     : `https://marketing-bot-eta.vercel.app/api/webhook?noliff=1`;
 
   const buttons = [

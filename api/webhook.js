@@ -7,13 +7,11 @@ const client = new line.messagingApi.MessagingApiClient({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || 'dummy'
 });
 
-// Initialize Gemini AI
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY || 'dummy' 
 });
 
 module.exports = async function handler(req, res) {
-  // Handle GET requests for LIFF Share Target Picker
   if (req.method === 'GET') {
     if (req.query.noliff) {
       return res.status(400).send("กรุณาตั้งค่า LIFF_ID ใน Vercel Environment Variables ก่อนใช้งานฟีเจอร์ส่งต่อครับ");
@@ -90,26 +88,21 @@ module.exports = async function handler(req, res) {
             }
 
             const urlParams = new URLSearchParams(window.location.search);
-            const dataStr = urlParams.get('data');
-            if (!dataStr) {
+            const rowStr = urlParams.get('row');
+            if (!rowStr) {
               alert('ไม่พบข้อมูลสำหรับแชร์');
               return;
             }
 
-            const b64 = decodeURIComponent(dataStr);
-            const binaryStr = atob(b64);
-            const bytes = new Uint8Array(binaryStr.length);
-            for (let i = 0; i < binaryStr.length; i++) {
-              bytes[i] = binaryStr.charCodeAt(i);
-            }
-            const utf8Str = new TextDecoder('utf-8').decode(bytes);
-            const leadData = JSON.parse(utf8Str);
-
             const response = await fetch(window.location.pathname, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'generateFlex', lead: leadData })
+              body: JSON.stringify({ action: 'generateFlexByRow', row: parseInt(rowStr, 10) })
             });
+
+            if (!response.ok) {
+              throw new Error('โหลดข้อมูลไม่สำเร็จ (HTTP ' + response.status + ')');
+            }
 
             flexMessageData = await response.json();
             
@@ -117,8 +110,6 @@ module.exports = async function handler(req, res) {
             shareBtn.style.display = 'inline-block';
             shareBtn.onclick = shareFlex;
 
-            // In mobile LINE, we can auto-click since it's not a popup window. 
-            // In external browsers, auto-clicking is blocked.
             if (liff.isInClient()) {
               shareFlex();
             }
@@ -140,9 +131,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Check if it's an internal call from LIFF to generate Flex JSON
-    if (req.body.action === 'generateFlex' && req.body.lead) {
-      const flexJSON = generateFlexMessage(req.body.lead, { isShared: true });
+    if (req.body.action === 'generateFlexByRow' && typeof req.body.row === 'number') {
+      const allLeads = await getLeads({ limit: 100000 });
+      const lead = allLeads.find(l => l.rowIndex === req.body.row);
+      if (!lead) {
+        return res.status(404).json({ error: "ไม่พบข้อมูล Lead ในแถวนี้" });
+      }
+      const flexJSON = generateFlexMessage(lead, { isShared: true });
       return res.status(200).json(flexJSON);
     }
 
@@ -166,7 +161,6 @@ async function handleEvent(event) {
 
   const text = event.message.text.trim().toLowerCase();
 
-  // 1. Check for Lead generation command
   const triggers = [
     'ส่ง lead', 'ส่ง หลีด', 'ส่ง ลีด', 'ส่ง หรีด', 'ส่ง รีด',
     'ส่งlead', 'ส่งหลีด', 'ส่งลีด', 'ส่งหรีด', 'ส่งรีด'
@@ -231,12 +225,15 @@ async function handleEvent(event) {
     }
   }
 
-  // 2. Check for Gemini AI Mention
   if (text.includes('@marketing bot')) {
     try {
       const prompt = text.replace(/@marketing bot/g, '').trim();
       const allLeads = await getLeads({ limit: 100000 });
-      const contextData = JSON.stringify(allLeads, null, 2);
+      const contextData = JSON.stringify(allLeads.map(l => {
+        // Exclude rowIndex from AI context to save tokens
+        const { rowIndex, ...rest } = l;
+        return rest;
+      }), null, 2);
       
       const systemInstruction = `คุณคือ AI ผู้ช่วยอัจฉริยะชื่อ Marketing Bot หน้าที่ของคุณคือการช่วยสรุป วิเคราะห์ และตอบคำถามเกี่ยวกับฐานข้อมูลลูกค้า (Lead) ของบริษัท
       
